@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { IScannerControls } from "@zxing/browser";
+import Swal from "sweetalert2";
 import {
   ArrowLeft,
   Banknote,
@@ -45,6 +46,27 @@ type CartItem = Pick<
 type PaymentMethod = "cash" | "transfer" | "mixed";
 
 const maxProductsPerSale = 10;
+const cameraConstraints: MediaStreamConstraints = {
+  video: {
+    facingMode: { ideal: "environment" },
+    width: { ideal: 1280 },
+    height: { ideal: 720 },
+  },
+};
+
+function showScanToast(productName: string) {
+  void Swal.fire({
+    toast: true,
+    position: "top",
+    icon: "success",
+    title: `${productName} agregado`,
+    showConfirmButton: false,
+    timer: 850,
+    timerProgressBar: true,
+    background: "#071b2f",
+    color: "#e0f2fe",
+  });
+}
 
 export default function BillingPage() {
   const router = useRouter();
@@ -52,6 +74,8 @@ export default function BillingPage() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scannerControlsRef = useRef<IScannerControls | null>(null);
   const lastScanRef = useRef("");
+  const cartRef = useRef<CartItem[]>([]);
+  const totalQuantityRef = useRef(0);
   const [user, setUser] = useState<User | null>(null);
   const [checkingSession, setCheckingSession] = useState(firebaseReady);
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -91,6 +115,11 @@ export default function BillingPage() {
     paymentMethod === "transfer" ? 0 : Math.max(cashReceived - cashDue, 0);
 
   useEffect(() => {
+    cartRef.current = cart;
+    totalQuantityRef.current = totalQuantity;
+  }, [cart, totalQuantity]);
+
+  useEffect(() => {
     if (!firebaseReady) {
       return;
     }
@@ -118,14 +147,16 @@ export default function BillingPage() {
         return;
       }
 
-      if (totalQuantity >= maxProductsPerSale) {
+      if (totalQuantityRef.current >= maxProductsPerSale) {
         setMessage("Esta venta ya tiene el maximo de 10 productos.");
         return;
       }
 
       setMessage("");
 
-      const existingItem = cart.find((item) => item.barcode === cleanBarcode);
+      const existingItem = cartRef.current.find(
+        (item) => item.barcode === cleanBarcode
+      );
 
       if (existingItem) {
         if (existingItem.quantity >= existingItem.stock) {
@@ -140,6 +171,7 @@ export default function BillingPage() {
               : item
           )
         );
+        showScanToast(existingItem.name);
         return;
       }
 
@@ -165,20 +197,29 @@ export default function BillingPage() {
         return;
       }
 
-      setCart((currentCart) => [
-        ...currentCart,
-        {
-          id: productDoc.id,
-          barcode: data.barcode ?? cleanBarcode,
-          name: data.name ?? "Producto sin nombre",
-          price: Number(data.price ?? 0),
-          cost: Number(data.cost ?? 0),
-          stock,
-          quantity: 1,
-        },
-      ]);
+      const productName = data.name ?? "Producto sin nombre";
+
+      setCart((currentCart) => {
+        if (currentCart.reduce((sum, item) => sum + item.quantity, 0) >= maxProductsPerSale) {
+          return currentCart;
+        }
+
+        return [
+          ...currentCart,
+          {
+            id: productDoc.id,
+            barcode: data.barcode ?? cleanBarcode,
+            name: productName,
+            price: Number(data.price ?? 0),
+            cost: Number(data.cost ?? 0),
+            stock,
+            quantity: 1,
+          },
+        ];
+      });
+      showScanToast(productName);
     },
-    [cart, totalQuantity]
+    []
   );
 
   useEffect(() => {
@@ -194,8 +235,8 @@ export default function BillingPage() {
       try {
         const { BrowserMultiFormatReader } = await import("@zxing/browser");
         const codeReader = new BrowserMultiFormatReader();
-        const controls = await codeReader.decodeFromVideoDevice(
-          undefined,
+        const controls = await codeReader.decodeFromConstraints(
+          cameraConstraints,
           videoRef.current ?? undefined,
           (result) => {
             if (!result || cancelled) {
@@ -511,7 +552,7 @@ export default function BillingPage() {
                           {item.name}
                         </h3>
                         <p className="mt-1 text-sm text-slate-400">
-                          {currency(item.price)} · {item.barcode}
+                          {currency(item.price)} / {item.barcode}
                         </p>
                       </div>
                       <button
@@ -683,12 +724,16 @@ export default function BillingPage() {
               </button>
             </div>
 
-            <video
-              ref={videoRef}
-              className="aspect-[3/4] w-full rounded-lg bg-black object-cover"
-              muted
-              playsInline
-            />
+            <div className="relative overflow-hidden rounded-lg bg-black">
+              <video
+                ref={videoRef}
+                className="aspect-[3/4] w-full object-cover"
+                muted
+                playsInline
+              />
+              <div className="pointer-events-none absolute inset-x-8 top-1/2 h-24 -translate-y-1/2 rounded-lg border-2 border-sky-300 shadow-[0_0_0_999px_rgba(0,0,0,0.35)]" />
+              <div className="pointer-events-none absolute inset-x-12 top-1/2 h-0.5 -translate-y-1/2 bg-sky-300/80" />
+            </div>
 
             {scannerError ? (
               <p className="mt-3 rounded-lg border border-red-300/30 bg-red-950/45 px-3 py-2 text-sm text-red-100">
