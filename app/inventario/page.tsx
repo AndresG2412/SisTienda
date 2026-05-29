@@ -145,7 +145,7 @@ export default function InventoryPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(145deg,#030914_0%,#071b2f_48%,#0d3155_100%)] px-4 py-5 text-slate-100 sm:px-8">
+    <main className="min-h-screen bg-[linear-gradient(145deg,#030914_0%,#071b2f_48%,#0d3155_100%)] px-4 pb-5 pt-[72px] text-slate-100 sm:px-8">
       <section className="mx-auto w-full max-w-6xl">
         <header className="mb-5 flex items-center gap-3">
           <button
