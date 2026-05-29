@@ -18,6 +18,7 @@ const menuItems = [
     title: "Facturar",
     description: "Ventas y comprobantes",
     icon: FileText,
+    path: "/facturar",
   },
   {
     title: "Inventario",
