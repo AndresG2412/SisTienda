@@ -32,7 +32,7 @@ export function CardProduct({ product, onEdit, onDelete }: CardProductProps) {
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <h2 className="line-clamp-2 text-base font-semibold text-slate-50">
+            <h2 className="line-clamp-1 text-base font-semibold text-slate-50">
               {product.name}
             </h2>
             <span

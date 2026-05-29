@@ -12,7 +12,7 @@ import {
   orderBy,
   query,
 } from "firebase/firestore";
-import { CardProduct } from "@/components/CardProduct";
+import { CardProduct } from "@/app/components/CardProduct";
 import {
   getFirebaseAuth,
   getFirebaseDb,

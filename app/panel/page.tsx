@@ -35,6 +35,7 @@ const menuItems = [
     title: "Reportes",
     description: "Resumenes y metricas",
     icon: ChartColumn,
+    path: "/reportes",
   },
 ];
 
