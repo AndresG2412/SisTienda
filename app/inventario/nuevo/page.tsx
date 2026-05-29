@@ -18,8 +18,12 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
+  limit,
+  query,
   serverTimestamp,
   updateDoc,
+  where,
 } from "firebase/firestore";
 import {
   getFirebaseAuth,
@@ -259,6 +263,26 @@ function ProductFormContent() {
     setMessage("");
 
     try {
+      const db = getFirebaseDb();
+      const cleanBarcode = form.barcode.trim();
+      const duplicateQuery = query(
+        collection(db, "products"),
+        where("barcode", "==", cleanBarcode),
+        limit(1)
+      );
+      const duplicateSnapshot = await getDocs(duplicateQuery);
+      const duplicateProduct = duplicateSnapshot.docs.find(
+        (productDoc) => productDoc.id !== editingId
+      );
+
+      if (duplicateProduct) {
+        const duplicateData = duplicateProduct.data() as ProductForm;
+
+        throw new Error(
+          `El codigo ${cleanBarcode} ya esta registrado en ${duplicateData.name ?? "otro producto"}.`
+        );
+      }
+
       let imageUrl = form.imageUrl;
 
       if (imageFile) {
@@ -267,7 +291,7 @@ function ProductFormContent() {
 
       const productData = {
         ...form,
-        barcode: form.barcode.trim(),
+        barcode: cleanBarcode,
         name: form.name.trim(),
         supplier: form.supplier.trim(),
         notes: form.notes.trim(),
@@ -279,8 +303,6 @@ function ProductFormContent() {
         updatedAt: serverTimestamp(),
         updatedBy: user?.email ?? "",
       };
-
-      const db = getFirebaseDb();
 
       if (editingId) {
         await updateDoc(doc(db, "products", editingId), productData);
@@ -343,6 +365,50 @@ function ProductFormContent() {
       });
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function captureBarcodeFromFrame() {
+    if (!videoRef.current) {
+      return;
+    }
+
+    try {
+      const { BrowserMultiFormatReader } = await import("@zxing/browser");
+      const canvas = document.createElement("canvas");
+      const video = videoRef.current;
+      const width = video.videoWidth;
+      const height = video.videoHeight;
+
+      if (!width || !height) {
+        setScannerError("La camara aun no esta lista para capturar.");
+        return;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d");
+
+      if (!context) {
+        setScannerError("No se pudo preparar la captura.");
+        return;
+      }
+
+      context.drawImage(video, 0, 0, width, height);
+      const codeReader = new BrowserMultiFormatReader();
+      const result = codeReader.decodeFromCanvas(canvas);
+      const code = result.getText();
+
+      setForm((current) => ({
+        ...current,
+        barcode: code,
+      }));
+      setScannerOpen(false);
+      showCodeToast(code);
+    } catch {
+      setScannerError(
+        "No se pudo leer el codigo desde la captura. Acerca un poco el producto o cambia el angulo."
+      );
     }
   }
 
@@ -610,6 +676,15 @@ function ProductFormContent() {
                 Apunta la camara al codigo de barras del producto.
               </p>
             )}
+
+            <button
+              className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-sky-400 px-4 font-semibold text-[#04101f] transition hover:bg-sky-300"
+              type="button"
+              onClick={captureBarcodeFromFrame}
+            >
+              <Camera size={18} />
+              Capturar codigo
+            </button>
           </div>
         </div>
       ) : null}

@@ -701,22 +701,65 @@ export default function BillingPage() {
               ) : null}
 
               {paymentMethod !== "transfer" ? (
-                <label className="mt-4 block">
-                  <span className="mb-2 block text-sm font-medium">
+                <div className="mt-4 block">
+                  <span className="mb-4 block text-sm font-medium">
                     {paymentMethod === "mixed"
                       ? `Efectivo pendiente: ${currency(cashDue)}`
                       : "Con cuanto cancela"}
                   </span>
-                  <input
-                    className="h-12 w-full rounded-lg border border-sky-200/20 bg-[#061425] px-3 outline-none focus:border-sky-300"
-                    min="0"
-                    type="number"
-                    value={cashReceived}
-                    onChange={(event) =>
-                      setCashReceived(Number(event.target.value))
-                    }
-                  />
-                </label>
+                  
+                  {/* Billetes disponibles */}
+                  <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                    {[1000, 2000, 5000, 10000, 20000, 50000, 100000].map((denomination) => (
+                      <button
+                        key={denomination}
+                        onClick={() => {
+                          setCashReceived(cashReceived + denomination);
+                          // O si prefieres rastrear individualmente cada billete:
+                          // setSelectedBills([...selectedBills, denomination]);
+                        }}
+                        className="relative h-20 rounded-lg border-2 border-sky-200/30 bg-gradient-to-br from-sky-900/40 to-sky-950/40 px-2 py-2 font-semibold text-sky-100 transition-all hover:border-sky-300 hover:bg-sky-900/60 active:scale-95"
+                      >
+                        <div className="text-xs opacity-75">Billete</div>
+                        <div className="text-lg">${(denomination / 1000).toFixed(0)}K</div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Resumen del efectivo */}
+                  {cashReceived > 0 && (
+                    <div className="mb-3 rounded-lg bg-sky-900/30 p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-sky-100">Total recibido:</span>
+                        <span className="text-lg font-bold text-sky-300">{currency(cashReceived)}</span>
+                      </div>
+                      {paymentMethod === "mixed" && (
+                        <div className="mt-1 text-xs text-sky-200/70">
+                          Falta: {currency(Math.max(0, cashDue - cashReceived))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Botones de control */}
+                  <div className="flex gap-2">
+                    <input
+                      className="flex-1 h-12 rounded-lg border border-sky-200/20 bg-[#061425] px-3 outline-none focus:border-sky-300 text-sm"
+                      type="number"
+                      placeholder="O ingresa un monto..."
+                      value={cashReceived || ""}
+                      onChange={(event) => setCashReceived(Number(event.target.value) || 0)}
+                    />
+                    {cashReceived > 0 && (
+                      <button
+                        onClick={() => setCashReceived(0)}
+                        className="h-12 rounded-lg bg-red-900/30 px-4 text-sm font-medium text-red-300 transition-all hover:bg-red-900/50"
+                      >
+                        Limpiar
+                      </button>
+                    )}
+                  </div>
+                </div>
               ) : null}
 
               {paymentMethod !== "transfer" ? (
