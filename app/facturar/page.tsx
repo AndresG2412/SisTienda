@@ -404,10 +404,47 @@ export default function BillingPage() {
 
       setSaleCompleted(true);
       setScannerOpen(false);
+      const result = await Swal.fire({
+        icon: "success",
+        title: "Venta finalizada",
+        html: `
+          <div style="text-align:center">
+            <p>Total guardado: <strong>${currency(total)}</strong></p>
+            ${
+              paymentMethod !== "transfer"
+                ? `<p>Cambio: <strong>${currency(change)}</strong></p>`
+                : ""
+            }
+          </div>
+        `,
+        confirmButtonText: "Otro cliente",
+        cancelButtonText: "Regresar",
+        showCancelButton: true,
+        background: "#071b2f",
+        color: "#e0f2fe",
+        confirmButtonColor: "#38bdf8",
+        cancelButtonColor: "#0f2942",
+      });
+
+      if (result.isConfirmed) {
+        resetSale(true);
+      } else {
+        router.push("/panel");
+      }
     } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : "No se pudo cerrar la venta."
-      );
+      const errorMessage =
+        error instanceof Error ? error.message : "No se pudo cerrar la venta.";
+
+      setMessage(errorMessage);
+      void Swal.fire({
+        icon: "error",
+        title: "Venta no guardada",
+        text: errorMessage,
+        confirmButtonText: "Entendido",
+        background: "#071b2f",
+        color: "#e0f2fe",
+        confirmButtonColor: "#38bdf8",
+      });
     } finally {
       setSaving(false);
     }
